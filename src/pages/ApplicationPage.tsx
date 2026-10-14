@@ -1,11 +1,26 @@
 import { Link, useParams } from "react-router";
-import { seedApplications } from "../data/seed";
-import { StageBadge } from "../components/StageBadge";
-import { daysSince, formatDaysAgo, needsNudge } from "../lib/applications";
+import { ApplicationDetail } from "../components/ApplicationDetail";
+import { useApplications } from "../hooks/useApplications";
 
 export function ApplicationPage() {
   const { id } = useParams();
-  const application = seedApplications.find((a) => a.id === id);
+  const { applications, loading, error, update, remove, reload } =
+    useApplications();
+
+  if (loading) return <p role="status">Loading…</p>;
+
+  if (error) {
+    return (
+      <div role="alert">
+        <p>{error}</p>
+        <button type="button" onClick={() => void reload()}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const application = applications.find((a) => a.id === id);
 
   if (!application) {
     return (
@@ -16,32 +31,12 @@ export function ApplicationPage() {
     );
   }
 
-  const days = daysSince(application.dateSent);
-  const nudge = needsNudge(application);
-
   return (
-    <section>
-      <Link to="/">← Back to all applications</Link>
-      <h1>{application.company}</h1>
-      <p>{application.role}</p>
-      <StageBadge stage={application.stage} />
-      <p>
-        {application.stage === "wishlist"
-          ? "Not sent yet"
-          : `Sent ${application.dateSent} · ${formatDaysAgo(days)}`}
-        {application.link && (
-          <>
-            {" · "}
-            <a href={application.link} target="_blank" rel="noreferrer">
-              View the advert ↗
-            </a>
-          </>
-        )}
-      </p>
-      {nudge && <p>Needs a nudge</p>}
-      <h2>Notes</h2>
-      <p>{application.notes ?? "No notes yet."}</p>
-      {/* Stage change, notes editing and delete arrive in Step 04 */}
-    </section>
+    <ApplicationDetail
+      key={application.id}
+      application={application}
+      onUpdate={(changes) => update(application.id, changes)}
+      onDelete={() => remove(application.id)}
+    />
   );
 }

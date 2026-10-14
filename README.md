@@ -1,295 +1,108 @@
 # Applied
 
-A job-application tracker built with **React + TypeScript + Vite**. One small web app to keep track of every job you have applied for: what, where, when, and how far it has got.
+A job-application tracker built with React, TypeScript and Vite. It keeps a list of the jobs you have applied for, shows how far each one has got, and points out the ones that have gone quiet.
 
-> ITTHYNK Smart Solutions · Cohort 2026 · React Development: Beginner to Professional
-> Solo project. No backend, no auth, no payments. Data lives in the browser's `localStorage`.
+Built as the final project for the ITTHYNK Smart Solutions React Development course (Cohort 2026).
 
----
+![Applied running in light and dark mode](docs/screenshot.png)
 
-## 1. What the app does
+## What it does
 
-Each job (an **application**) holds: company, job title, optional advert link, date sent, stage, optional notes.
+Each application holds a company, a job title, an optional link to the advert, the date it was sent, a stage (`Saved`, `Applied`, `Interview`, `Offer` or `Closed`) and optional notes.
 
-You can:
+- Add an application through a validated form
+- Search by company or job title (ignores capital letters)
+- Filter by stage; search and filter work together
+- See how many applications are at each stage
+- Open one to change its stage, edit its notes, or delete it (with a confirmation step)
+- A **Needs a nudge** marker appears on anything still at `Applied` more than 14 days after it was sent
+- Light and dark theme, remembered between visits
+- Loading, error, empty and "no matches" states are all handled, and the last two read differently
 
-- Add a job through a validated form
-- Search by company or job title (case-insensitive)
-- Filter by stage (search and filter work **together**)
-- Open a job to read it, edit notes, change its stage, or delete it (with confirmation)
-- See a count per stage across the top
-- See which jobs **need a nudge** (still `applied` more than 14 days after sending)
-- Switch light/dark theme (remembered after closing the tab)
+There is no backend and no login. Data is saved in the browser's `localStorage`.
 
-### The one rule that shapes the build
+## Tools used
 
-```
-needsNudge = stage === "applied" && daysSince(dateSent) > 14
-```
-
-This is a **derived value**. It is calculated every time, **never stored**. The same goes for the stage counts and the filtered list. If it can be calculated from existing state, it is not state.
-
-Exactly 14 days is **not** a nudge. 15 days is.
-
----
-
-## 2. Tech stack
-
-| Tool | Purpose |
+| Tool | Used for |
 | --- | --- |
-| React 19 + TypeScript + Vite | App, types, build tool |
-| React Router | 4 routes, layout route, URL params, 404 |
-| Context API | Theme (`ThemeProvider` + `useTheme`) |
-| Tailwind CSS v4 (Vite plugin) | Styling, responsive grid, dark mode |
-| shadcn/ui (`-b radix`) | button, card, input, label, badge, select |
-| React Hook Form | Add form with rules and accessible errors |
-| Vitest + React Testing Library + user-event + jest-dom + jsdom | Tests |
+| React 19, TypeScript, Vite | The app, its types, the build |
+| React Router | Four routes, a layout route, a URL parameter, a 404 |
+| React Hook Form | The add form and its validation |
+| Context API | The theme |
+| Tailwind CSS v4 | Styling, responsive layout, dark mode |
+| shadcn/ui | Button, Card, Input, Label, Badge, Textarea |
+| Vitest, React Testing Library | Unit tests and a form test |
 
-Stretch only (not in the main build): Supabase, TanStack Query, Zod, Zustand, useReducer, optimistic updates, Playwright + GitHub Actions.
+## Running it locally
 
----
-
-## 3. Data model (`src/types.ts`)
-
-```ts
-export type Stage = "wishlist" | "applied" | "interview" | "offer" | "closed";
-
-export interface Application {
-  id: string;          // crypto.randomUUID()
-  company: string;     // required, min 2 chars
-  role: string;        // required, min 2 chars
-  link?: string;       // optional, must be a valid URL if given
-  dateSent: string;    // YYYY-MM-DD, required, never in the future
-  stage: Stage;        // defaults to the first stage ("wishlist")
-  notes?: string;      // optional
-  createdAt: string;   // ISO timestamp, set once, used to sort (newest first)
-}
+```bash
+pnpm install
+pnpm dev
 ```
 
-`Stage` is always a union, never a plain `string`.
+Then open http://localhost:5173. (`npm install` and `npm run dev` work too.)
 
-> **Brief inconsistency to note:** the data table says the stage is `"wishlist"` while the screens and prose call it "Saved". We keep `"wishlist"` as the value in code and may show the label **Saved** in the UI. Worth confirming with the mentor.
+Other commands:
 
----
-
-## 4. Routes and pages
-
-| Route | Page | Purpose |
-| --- | --- | --- |
-| `/` | `ApplicationsPage` | List, stage counts, search, stage filter |
-| `/applications/:id` | `ApplicationPage` | One job: change stage, edit notes, delete |
-| `/new` | `NewApplicationPage` | Add form |
-| `*` | `NotFoundPage` | 404 with same header and theme |
-
-All routes sit inside a **layout route** that renders the header and an `<Outlet />`, so the header does not remount on navigation.
-
-### `/` ApplicationsPage
-
-Must handle: **loading** (skeletons or "Loading"), **error** (readable message), **empty** (nothing saved, with an add button), **no matches** (filters returned nothing, with a clear-filters button; must read differently from empty).
-
-- Owns `search` and `stage` state (`useState` x2), lifted up and passed to `FilterBar`
-- Counts come from `countByStage(allApplications)`, so they ignore the filters
-- Filtered list is derived while rendering, not stored
-- Sorted newest first by `createdAt`
-
-### `/applications/:id` ApplicationPage
-
-- Reads `id` with `useParams`
-- Shows company, role, stage, date sent, days ago, nudge marker, advert link (new tab), notes
-- Actions: change stage (saves, nudge disappears if not `applied`), save notes (button disabled while saving), delete (two-step confirm, then back to list)
-- Unknown id: "we could not find that application" plus link back to list
-- Survives refresh (id is in the URL)
-
-### `/new` NewApplicationPage
-
-- `useForm` with `defaultValues` (stage starts on the first stage)
-- `useRef` focuses the first field on open (required technique)
-- On submit with errors: messages under each broken field, first broken field gets focus
-- On success: `add()`, then `navigate("/")`
-- Save button disabled while `isSubmitting` (no double create)
-- Cancel goes back without saving or asking
-
-| Field | Required | Rule / message |
-| --- | --- | --- |
-| Company | Yes | min 2 chars, "Company is required" |
-| Job title | Yes | min 2 chars, "Job title is required" |
-| Link | No | valid URL, "That does not look like a link" |
-| Date sent | Yes | not in the future, "You cannot have sent it tomorrow" |
-| Stage | Yes | one of the five |
-| Notes | No | free text |
-
-Accessibility on the form: real `<label htmlFor>`, `role="alert"` on errors, `aria-invalid` and `aria-describedby` on inputs, full keyboard use, Enter submits.
-
-### `*` NotFoundPage
-
-"That page does not exist", with a button back to `/`.
-
----
-
-## 5. Folder structure
-
-```
-applied/
-├── src/
-│   ├── api/
-│   │   └── applications.ts        # async read/write over localStorage (300ms delay)
-│   ├── components/
-│   │   ├── ApplicationCard.tsx    # one job card
-│   │   ├── ApplicationList.tsx    # maps applications to cards
-│   │   ├── StageBadge.tsx         # colour AND the word
-│   │   ├── StageSummary.tsx       # counts row
-│   │   ├── FilterBar.tsx          # search box + stage dropdown
-│   │   ├── ThemeToggle.tsx        # light/dark switch
-│   │   └── ui/                    # shadcn/ui components (button, card, input, label, badge, select)
-│   ├── context/
-│   │   └── ThemeContext.tsx       # ThemeProvider + useTheme
-│   ├── data/
-│   │   └── seed.ts                # 7 sample applications (Application[])
-│   ├── hooks/
-│   │   └── useApplications.ts     # list, loading, error, add, update, remove, reload
-│   ├── lib/
-│   │   ├── applications.ts        # PURE functions, no React
-│   │   └── applications.test.ts
-│   ├── pages/
-│   │   ├── ApplicationsPage.tsx   # /
-│   │   ├── ApplicationPage.tsx    # /applications/:id
-│   │   ├── NewApplicationPage.tsx # /new
-│   │   └── NotFoundPage.tsx       # *
-│   ├── types.ts                   # Stage, Application
-│   ├── App.tsx                    # routes
-│   └── main.tsx                   # providers
-├── package.json
-└── README.md
+```bash
+pnpm test -- --run   # run the tests once
+pnpm build           # type-check and build for production
 ```
 
-Additions not in the brief's tree but required by it: `src/data/seed.ts` (Step 01) and a layout component for the header (e.g. `components/Layout.tsx` or `Header.tsx`) to host the `<Outlet />`. Any deviation should be explainable.
+## Project structure
 
----
-
-## 6. Components
-
-| Component | Props | State | Notes |
-| --- | --- | --- | --- |
-| `ApplicationCard` | `application` | none | Calculates `daysSince` and `needsNudge` while rendering; links to `/applications/:id`; uses `<article>` |
-| `ApplicationList` | `applications` | none | `.map()` with `key={application.id}` |
-| `StageBadge` | `stage` | none | Colour **and** word (never colour alone) |
-| `StageSummary` | `counts: Record<Stage, number>` | none | Counts row |
-| `FilterBar` | `search`, `onSearchChange`, `stage`, `onStageChange` | none (controlled) | Search input and stage select, both with labels |
-| `ThemeToggle` | none | reads `useTheme()` | Toggles light/dark |
-| Header / Layout | none | none | App name, `ThemeToggle`, "Add application" button, `<Outlet />` |
-| Empty / no-match / error / loading views | message and action props | none | Small reusable pieces so the two "nothing to show" states stay distinct |
-
-Rule of thumb: components **draw what they are given**. They never save, delete or change data directly. Pages and hooks do that.
-
-### Reusable pieces
-
-- `StageBadge`: used on the card and the detail page
-- `ui/*` (shadcn): `Button`, `Card`, `Input`, `Label`, `Badge`, `Select` used across all pages
-- A shared form-field wrapper (label + input + error with `role="alert"`) if the form gets repetitive
-- A shared "nudge marker" and "days ago" display used on both the card and the detail page
-
----
-
-## 7. Hooks
-
-### Built-in hooks and where they are used
-
-| Hook | Where | Why |
-| --- | --- | --- |
-| `useState` | `ApplicationsPage` (`search`, `stage`); `useApplications` (list, loading, error); delete-confirm toggle on `ApplicationPage`; notes text on `ApplicationPage`; `ThemeProvider` theme | Values that change what you see |
-| `useEffect` | `useApplications` (load once on mount, `[]`); `ThemeProvider` (put/remove `dark` class on `<html>`, save to localStorage) | Talking to things outside React |
-| `useRef` | `NewApplicationPage` | Focus first field when the form opens |
-| `useParams` | `ApplicationPage` | Read `:id` |
-| `useNavigate` | `NewApplicationPage`, `ApplicationPage` | Go back to list after save/delete |
-
-**Not state** (derived while rendering): stage counts, filtered list, days since, needs-nudge.
-
-### Custom hooks
-
-**`useApplications()`** in `src/hooks/useApplications.ts`
-
-```ts
-const { applications, loading, error, add, update, remove, reload } = useApplications();
+```
+src/
+  api/          applications.ts          async read/write over localStorage (300 ms delay)
+  components/   ApplicationCard, ApplicationDetail, ApplicationList, FieldError,
+                FilterBar, Layout, NativeSelect, StageBadge, StageSummary, ThemeToggle
+    ui/         shadcn/ui components
+  context/      ThemeContext.tsx         ThemeProvider and useTheme
+  data/         seed.ts                  sample applications for a first visit
+  hooks/        useApplications.ts       list, loading, error, add, update, remove, reload
+  lib/          applications.ts          pure functions (daysSince, needsNudge, countByStage, ...)
+                stages.ts                stage order and display words
+                validation.ts            isValidUrl, isFutureDate
+  pages/        ApplicationsPage (/), ApplicationPage (/applications/:id),
+                NewApplicationPage (/new), NotFoundPage (*)
+  test/         setup.ts
+  types.ts      Stage and Application
 ```
 
-- `useState` for `applications`, `loading`, `error`
-- `useEffect` loads once on mount
-- After every write: call the API, then refresh the list, so screen and storage never disagree
-- Should be generic-friendly and fully typed
+## How it works
 
-**`useTheme()`** in `src/context/ThemeContext.tsx`: returns `{ theme, toggleTheme }` from context; throws a clear error if used outside the provider.
+- **State lives in the right place.** The search text and stage filter are `useState` in `ApplicationsPage`, the nearest parent of both the filter bar and the list. `FilterBar` holds no state of its own.
+- **Anything that can be calculated is not stored.** The stage counts, the filtered list, "days ago" and "needs a nudge" are all worked out while rendering. Storing them would create a second version of the truth.
+- **The nudge rule is a pure function.** `needsNudge(application, today)` takes the date as a parameter, so the 14-day boundary can be tested without waiting. Exactly 14 days is not a nudge; 15 is.
+- **The data layer hides where data lives.** `api/applications.ts` exposes four async functions. Nothing above it knows it is `localStorage`, so replacing it with a real backend would change that one file.
+- **`useApplications` loads once on mount** with `useEffect`, and refreshes the list after every write so the screen never disagrees with what is stored.
+- **Components only draw.** They receive data as props and never save or delete directly.
+- **Stage is never shown by colour alone.** Every badge carries its word.
+- The `wishlist` stage value is displayed as **Saved**.
 
----
+## Tests
 
-## 8. Pure functions (`src/lib/applications.ts`)
+24 tests in 3 files:
 
-No React imports in this file.
+- `needsNudge` at its boundary (14 days is not a nudge, 15 is), for every stage
+- `countByStage`, `daysSince`, `formatDaysAgo`, `toISODate`
+- `isValidUrl` and `isFutureDate`
+- The add form: submitting it empty shows an error under each required field, linked to its input, and fixing a field clears only that error. Elements are found by role and label, never by test id.
 
-```ts
-daysSince(dateSent: string, today?: Date): number
-needsNudge(application: Application, today?: Date): boolean
-countByStage(applications: Application[]): Record<Stage, number>
-```
+## Accessibility
 
-The optional `today` makes the 14-day boundary testable with a fixed date.
+Every input has a real label. Errors use `role="alert"` and are linked to their field with `aria-invalid` and `aria-describedby`. The whole app can be used from the keyboard with visible focus, and the first broken field gets focus on a failed submit. Lighthouse Accessibility was run in both themes.
 
----
+## Differences from the brief
 
-## 9. Data layer (`src/api/applications.ts`)
+- `ApplicationDetail.tsx` is a separate component so the notes box can start from the saved notes without copying props into state in an effect.
+- Native `<select>` elements (wrapped in `NativeSelect`) are used instead of shadcn's Radix `Select`, because they work directly with React Hook Form's `register`.
+- `stages.ts`, `validation.ts`, `FieldError.tsx` and `Layout.tsx` were added to avoid repeating stage labels, validation rules and markup.
 
-Four async functions over `localStorage` with a deliberate **300 ms delay** so loading states are real:
+## Performance note
 
-```ts
-fetchApplications(): Promise<Application[]>
-createApplication(input: NewApplication): Promise<Application>
-updateApplication(id: string, changes: Partial<Application>): Promise<Application>
-deleteApplication(id: string): Promise<void>
-```
+[Replace this line with one sentence about what re-rendered when you typed in the search box, from the React DevTools Profiler.]
 
-- Seeds `localStorage` from `seed.ts` the first time the app runs
-- Nothing above this file knows it is `localStorage`, so swapping to a real backend later means changing this one file only
-- Every button is disabled while a write is in flight
+## What I would do next
 
----
-
-## 10. Build plan (commit after each step)
-
-| Step | What | Done when |
-| --- | --- | --- |
-| 01 | `types.ts`, `seed.ts` (7 apps, 2+ `applied` older than 14 days), `StageBadge`, `ApplicationCard`, `ApplicationList`, render with `.map()` | 7 cards on screen, clean console |
-| 02 | React Router, 4 routes, layout route with `<Outlet />`, `useParams`, unknown id handling | All routes load, deep link survives refresh |
-| 03 | Pure functions, `search`/`stage` state in `ApplicationsPage`, `FilterBar`, `StageSummary`, nudge marker | Filters work together, nothing derived in state |
-| 04 | API file, `useApplications`, loading/error handling, seeding, disabled buttons | Data survives refresh, loading is visible |
-| 05 | React Hook Form add form, validation, a11y, `useRef` focus | Empty submit shows all errors, future date refused |
-| 06 | Tailwind v4, shadcn/ui, responsive grid, `ThemeProvider`, dark mode | Both themes readable, no overflow at 375 px |
-| 07 | Vitest tests, RTL form test, keyboard pass, Lighthouse a11y | `npm test -- --run` green (3+ tests), full tab-through works |
-| 08 | Remove dead code, Profiler note, README with screenshot, fresh-clone check | Someone else can clone, install, run |
-
----
-
-## 11. Required checklist (Definition of done)
-
-- [ ] Public GitHub repo with commits spread across the build
-- [ ] TypeScript throughout, no unjustified `any`
-- [ ] `Stage` is a union type
-- [ ] All four pages exist, including the 404
-- [ ] Deep link to one application survives refresh
-- [ ] Add, open, change stage, edit notes, delete all work
-- [ ] Data survives refresh
-- [ ] Stage filter and search work together
-- [ ] Stage counts derived, never stored
-- [ ] `needsNudge` is pure and tested at the boundary (14 = no, 15 = yes)
-- [ ] Form validates every rule with accessible errors
-- [ ] Loading, error, empty and no-matches states handled; last two differ
-- [ ] Buttons disable while a save is in flight
-- [ ] Works at 375 px with no horizontal scroll
-- [ ] Dark mode works, is remembered, readable in both themes
-- [ ] Stage shown by colour **and** word
-- [ ] Every control keyboard-reachable with visible focus
-- [ ] At least 3 tests pass
-- [ ] Fresh clone runs with `npm install` and `npm run dev`
-- [ ] README has screenshot, tools used, how to run, one Profiler note
-
-Required techniques: components/props/keys, `useState`, derived state, lifting state up, `useEffect`, custom hook, `useRef`, TS interfaces and unions, routing with params + layout + 404, Context, Tailwind, shadcn/ui, React Hook Form, accessibility, Profiler, Vitest + one RTL test.
-
----
+[Edit this to your own words. Suggestions: replace the hand-written data hook with TanStack Query and count the lines removed; move the form rules into a Zod schema; make stage changes optimistic with a rollback; add an activity log per application with `useReducer`; add a Playwright test and CI.]

@@ -12,3 +12,4 @@ export interface Application {
 }
 
 export type StageFilter = Stage | "all";
+export type NewApplication = Omit<Application, "id" | "createdAt">;
