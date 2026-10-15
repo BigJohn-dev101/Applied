@@ -24,7 +24,6 @@ function App() {
   return (
     <>
       <Routes>
-        {/* Layout route: header renders once, pages swap inside <Outlet /> */}
         <Route element={<Layout />}>
           <Route index element={<ApplicationsPage />} />
           <Route path="applications/:id" element={<ApplicationPage />} />

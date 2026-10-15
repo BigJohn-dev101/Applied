@@ -53,7 +53,6 @@ export function FilterBar({ search, onSearchChange, stage, onStageChange }: Prop
               value={stage}
               onChange={(e) => {
                 const value = e.target.value;
-                // Options are built from STAGES, so any non-"all" value is a Stage.
                 onStageChange(value === "all" ? "all" : (value as Stage));
               }}
               className="h-11 appearance-none rounded-xl bg-muted/50 pr-10 focus-visible:bg-background"

@@ -9,17 +9,16 @@ import { countByStage } from "../lib/applications";
 import type { StageFilter } from "../types";
 
 export function ApplicationsPage() {
-  // The only two pieces of state owned by this page.
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<StageFilter>("all");
 
   const { applications: stored, loading, error, reload } = useApplications();
 
-  // Everything below is derived while rendering, never stored.
+  
   const applications = [...stored].sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt),
   );
-  const counts = countByStage(applications); // whole record, ignores filters
+  const counts = countByStage(applications); 
 
   const query = search.trim().toLowerCase();
   const visible = applications.filter((a) => {

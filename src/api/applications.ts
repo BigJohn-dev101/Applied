@@ -2,7 +2,7 @@ import { seedApplications } from "../data/seed";
 import type { Application, NewApplication } from "../types";
 
 const STORAGE_KEY = "applied.applications";
-const DELAY_MS = 300; // deliberate, so loading states are visible
+const DELAY_MS = 300; 
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));

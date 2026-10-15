@@ -9,7 +9,6 @@ export function isValidUrl(value: string): boolean {
   }
 }
 
-// Dates are YYYY-MM-DD text, which compares correctly as plain strings.
 export function isFutureDate(dateSent: string, today: Date = new Date()): boolean {
   return dateSent > toISODate(today);
 }

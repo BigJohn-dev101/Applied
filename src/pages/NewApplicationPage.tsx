@@ -52,8 +52,6 @@ export function NewApplicationPage() {
     },
   });
 
-  // register() hands back its own ref, so we merge it with ours to also
-  // focus the first field when the form opens.
   const companyInputRef = useRef<HTMLInputElement | null>(null);
   const { ref: companyRegisterRef, ...companyField } = register("company", {
     validate: (value) => value.trim().length >= 2 || "Company is required",

@@ -1,7 +1,6 @@
-import { Link, NavLink, Outlet } from "react-router";
+import { Link, Outlet } from "react-router";
 import { Briefcase, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function Layout() {
